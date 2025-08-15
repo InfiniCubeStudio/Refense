@@ -1,0 +1,36 @@
+[gd_scene load_steps=8 format=3 uid="uid://dhb6imave8a4x"]
+
+[ext_resource type="PackedScene" uid="uid://boyeftqyb1rqe" path="res://player/player.tscn" id="1_gynrd"]
+[ext_resource type="Sky" uid="uid://dl0fsa482gxbf" path="res://maps/resources/sky.tres" id="2_8jrgs"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_gynrd"]
+size = Vector3(10, 0.1, 10)
+
+[sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_8jrgs"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_5etxy"]
+albedo_texture = SubResource("PlaceholderTexture2D_8jrgs")
+
+[sub_resource type="BoxMesh" id="BoxMesh_gynrd"]
+material = SubResource("StandardMaterial3D_5etxy")
+
+[sub_resource type="Environment" id="Environment_5etxy"]
+background_mode = 2
+sky = ExtResource("2_8jrgs")
+
+[node name="Node3D" type="Node3D"]
+
+[node name="MeshInstance3D" type="StaticBody3D" parent="."]
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="MeshInstance3D"]
+shape = SubResource("BoxShape3D_gynrd")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="MeshInstance3D"]
+transform = Transform3D(10.0747, 0, 0, 0, 0.05, 0, 0, 0, 10.0642, 0, 0, 0)
+mesh = SubResource("BoxMesh_gynrd")
+
+[node name="Player" parent="." instance=ExtResource("1_gynrd")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.00102025, 1, 0.0031209)
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="."]
+environment = SubResource("Environment_5etxy")
