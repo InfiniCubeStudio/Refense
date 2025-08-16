@@ -1,38 +1,13 @@
-[gd_scene load_steps=13 format=3 uid="uid://boyeftqyb1rqe"]
+[gd_scene load_steps=5 format=3 uid="uid://boyeftqyb1rqe"]
 
 [ext_resource type="Script" uid="uid://tjl0dhj5jgm8" path="res://scripts/player.gd" id="1_oul6g"]
-[ext_resource type="Script" uid="uid://vsvc7votvkka" path="res://scripts/time.gd" id="2_rkbax"]
-[ext_resource type="Texture2D" uid="uid://bg204ccxtqst" path="res://maps/Untitled.svg" id="3_g1dw6"]
-[ext_resource type="Script" uid="uid://bl2dubb2kqc4r" path="res://maps/resources/fade_text.gd" id="4_yw30f"]
+[ext_resource type="PackedScene" uid="uid://dorvikif2db7t" path="res://ui/hud.tscn" id="2_rkbax"]
 
 [sub_resource type="CapsuleShape3D" id="CapsuleShape3D_sh265"]
 radius = 0.4
 height = 1.8
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_oul6g"]
-
-[sub_resource type="Curve2D" id="Curve2D_oul6g"]
-_data = {
-"points": PackedVector2Array(0, 0, 0, 0, 2, 12, -90, 0, 90, 0, 90, 51, 0, 0, 0, 0, 178, 12)
-}
-point_count = 3
-
-[sub_resource type="PlaceholderTexture2D" id="PlaceholderTexture2D_rkbax"]
-size = Vector2(5, 5)
-
-[sub_resource type="Gradient" id="Gradient_rkbax"]
-colors = PackedColorArray(1, 1, 1, 1, 1, 1, 0, 1)
-
-[sub_resource type="GradientTexture1D" id="GradientTexture1D_g1dw6"]
-gradient = SubResource("Gradient_rkbax")
-width = 20
-
-[sub_resource type="Gradient" id="Gradient_g1dw6"]
-colors = PackedColorArray(0, 0, 0, 1, 0.00530208, 0, 0.704224, 1)
-
-[sub_resource type="GradientTexture1D" id="GradientTexture1D_yw30f"]
-gradient = SubResource("Gradient_g1dw6")
-width = 20
 
 [node name="Player" type="CharacterBody3D"]
 script = ExtResource("1_oul6g")
@@ -48,114 +23,4 @@ fov = 90.0
 transform = Transform3D(0.8, 0, 0, 0, 0.9, 0, 0, 0, 0.8, 0, 0, 0)
 mesh = SubResource("CapsuleMesh_oul6g")
 
-[node name="UI" type="Control" parent="."]
-layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-size_flags_horizontal = 3
-size_flags_vertical = 6
-
-[node name="Clock" type="Control" parent="UI"]
-layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_top = -15.0
-offset_bottom = -15.0
-grow_horizontal = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-script = ExtResource("2_rkbax")
-
-[node name="clock" type="Sprite2D" parent="UI/Clock"]
-position = Vector2(0, 58)
-scale = Vector2(0.64, 1)
-texture = ExtResource("3_g1dw6")
-
-[node name="Path2D" type="Path2D" parent="UI/Clock"]
-position = Vector2(-90, 26)
-curve = SubResource("Curve2D_oul6g")
-
-[node name="time" type="PathFollow2D" parent="UI/Clock/Path2D"]
-position = Vector2(2, 12)
-rotates = false
-
-[node name="Sprite2D" type="Sprite2D" parent="UI/Clock/Path2D/time"]
-texture = SubResource("PlaceholderTexture2D_rkbax")
-
-[node name="dayMarker" type="PathFollow2D" parent="UI/Clock/Path2D"]
-position = Vector2(30.1213, 42.1081)
-rotation = 0.421143
-progress = 43.5058
-rotates = false
-cubic_interp = false
-loop = false
-
-[node name="Sprite2D" type="Sprite2D" parent="UI/Clock/Path2D/dayMarker"]
-rotation = 1.57079
-texture = SubResource("GradientTexture1D_g1dw6")
-
-[node name="nightMarker" type="PathFollow2D" parent="UI/Clock/Path2D"]
-position = Vector2(149.879, 42.1081)
-rotation = -0.421143
-progress = 165.255
-rotates = false
-cubic_interp = false
-loop = false
-
-[node name="Sprite2D" type="Sprite2D" parent="UI/Clock/Path2D/nightMarker"]
-rotation = -1.57079
-texture = SubResource("GradientTexture1D_yw30f")
-
-[node name="timer" type="Label" parent="UI/Clock"]
-layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -16.0
-offset_top = 36.0
-offset_right = 16.0
-offset_bottom = 59.0
-grow_horizontal = 2
-text = "0:00"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="day" type="Label" parent="UI/Clock"]
-layout_mode = 1
-anchors_preset = 5
-anchor_left = 0.5
-anchor_right = 0.5
-offset_left = -16.0
-offset_top = 52.0
-offset_right = 16.0
-offset_bottom = 75.0
-grow_horizontal = 2
-theme_override_font_sizes/font_size = 10
-text = "Day 1"
-horizontal_alignment = 1
-vertical_alignment = 1
-
-[node name="next_day_text" type="Label" parent="UI"]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -122.0
-offset_top = -27.5
-offset_right = 122.0
-offset_bottom = 27.5
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_colors/font_color = Color(1, 0.801705, 0.526219, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
-theme_override_font_sizes/font_size = 40
-text = "Dawn of Day"
-horizontal_alignment = 1
-vertical_alignment = 1
-script = ExtResource("4_yw30f")
+[node name="hud" parent="." instance=ExtResource("2_rkbax")]

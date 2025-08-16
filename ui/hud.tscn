@@ -1,0 +1,236 @@
+[gd_scene load_steps=14 format=3 uid="uid://dorvikif2db7t"]
+
+[ext_resource type="Script" uid="uid://vsvc7votvkka" path="res://scripts/time.gd" id="1_7ihmi"]
+[ext_resource type="Texture2D" uid="uid://bg204ccxtqst" path="res://assets/textures/time/clock.svg" id="2_en2x2"]
+[ext_resource type="Texture2D" uid="uid://csafe405jgb7q" path="res://assets/textures/time/marker.png" id="3_1v5rv"]
+[ext_resource type="Script" uid="uid://bl2dubb2kqc4r" path="res://ui/scripts/fade_text.gd" id="4_q43x7"]
+[ext_resource type="Texture2D" uid="uid://c3e85sap74gpc" path="res://assets/ui/keys/scroll-wheel-icon.webp" id="5_en2x2"]
+
+[sub_resource type="Curve2D" id="Curve2D_oul6g"]
+_data = {
+"points": PackedVector2Array(0, 0, 0, 0, 2, 12, -90, 0, 90, 0, 90, 51, 0, 0, 0, 0, 178, 12)
+}
+point_count = 3
+
+[sub_resource type="Gradient" id="Gradient_rkbax"]
+colors = PackedColorArray(1, 1, 1, 1, 1, 1, 0, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_g1dw6"]
+gradient = SubResource("Gradient_rkbax")
+width = 20
+
+[sub_resource type="Gradient" id="Gradient_g1dw6"]
+colors = PackedColorArray(0, 0, 0, 1, 0.00530208, 0, 0.704224, 1)
+
+[sub_resource type="GradientTexture1D" id="GradientTexture1D_yw30f"]
+gradient = SubResource("Gradient_g1dw6")
+width = 20
+
+[sub_resource type="Animation" id="Animation_en2x2"]
+length = 0.001
+tracks/0/type = "bezier"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("selection_box:position:x")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"handle_modes": PackedInt32Array(0),
+"points": PackedFloat32Array(0, -0.25, 0, 0.25, 0),
+"times": PackedFloat32Array(0)
+}
+
+[sub_resource type="Animation" id="Animation_7ihmi"]
+resource_name = "toggle_build_menu"
+length = 0.3
+tracks/0/type = "bezier"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("selection_box:position:x")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"handle_modes": PackedInt32Array(0, 0),
+"points": PackedFloat32Array(-160, -0.25, 0, 0.25, 0, 0, -0.25, 0, 0.25, 0),
+"times": PackedFloat32Array(0, 0.3)
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_1v5rv"]
+_data = {
+&"RESET": SubResource("Animation_en2x2"),
+&"toggle_build_menu": SubResource("Animation_7ihmi")
+}
+
+[node name="hud" type="Control"]
+texture_filter = 1
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 6
+
+[node name="clock" type="Control" parent="."]
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_top = -15.0
+offset_bottom = -15.0
+grow_horizontal = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("1_7ihmi")
+
+[node name="clock" type="Sprite2D" parent="clock"]
+texture_filter = 6
+position = Vector2(0, 58)
+scale = Vector2(0.64, 1)
+texture = ExtResource("2_en2x2")
+
+[node name="Path2D" type="Path2D" parent="clock"]
+position = Vector2(-90, 26)
+curve = SubResource("Curve2D_oul6g")
+
+[node name="time" type="PathFollow2D" parent="clock/Path2D"]
+position = Vector2(2, 12)
+rotates = false
+
+[node name="Sprite2D" type="Sprite2D" parent="clock/Path2D/time"]
+texture = ExtResource("3_1v5rv")
+
+[node name="dayMarker" type="PathFollow2D" parent="clock/Path2D"]
+position = Vector2(30.1212, 42.1081)
+rotation = 0.421143
+progress = 43.5058
+rotates = false
+cubic_interp = false
+loop = false
+
+[node name="Sprite2D" type="Sprite2D" parent="clock/Path2D/dayMarker"]
+rotation = 1.57079
+texture = SubResource("GradientTexture1D_g1dw6")
+
+[node name="nightMarker" type="PathFollow2D" parent="clock/Path2D"]
+position = Vector2(149.879, 42.1082)
+rotation = -0.421143
+progress = 165.255
+rotates = false
+cubic_interp = false
+loop = false
+
+[node name="Sprite2D" type="Sprite2D" parent="clock/Path2D/nightMarker"]
+rotation = -1.57079
+texture = SubResource("GradientTexture1D_yw30f")
+
+[node name="timer" type="Label" parent="clock"]
+texture_filter = 6
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -16.0
+offset_top = 36.0
+offset_right = 16.0
+offset_bottom = 59.0
+grow_horizontal = 2
+text = "0:00"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="day" type="Label" parent="clock"]
+texture_filter = 6
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -16.0
+offset_top = 52.0
+offset_right = 16.0
+offset_bottom = 75.0
+grow_horizontal = 2
+theme_override_font_sizes/font_size = 10
+text = "Day 1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="next_day_text" type="Label" parent="."]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -122.0
+offset_top = -27.5
+offset_right = 122.0
+offset_bottom = 27.5
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(1, 0.801705, 0.526219, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_font_sizes/font_size = 40
+text = "Dawn of Day"
+horizontal_alignment = 1
+vertical_alignment = 1
+script = ExtResource("4_q43x7")
+
+[node name="healthbar" type="ProgressBar" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.28125
+anchor_top = 0.921296
+anchor_right = 0.71875
+anchor_bottom = 0.950617
+grow_horizontal = 2
+grow_vertical = 0
+show_percentage = false
+metadata/_edit_use_anchors_ = true
+
+[node name="build_menu" type="Control" parent="."]
+layout_mode = 2
+anchors_preset = 0
+anchor_right = 0.138021
+anchor_bottom = 1.0
+grow_vertical = 2
+
+[node name="selection_box" type="Panel" parent="build_menu"]
+layout_mode = 1
+anchors_preset = -1
+anchor_top = 0.242284
+anchor_right = 1.0
+anchor_bottom = 0.770062
+grow_horizontal = 2
+grow_vertical = 2
+metadata/_edit_use_anchors_ = true
+
+[node name="scroll_icon" type="Sprite2D" parent="build_menu/selection_box"]
+position = Vector2(124, 17)
+scale = Vector2(0.0351563, 0.0351563)
+texture = ExtResource("5_en2x2")
+
+[node name="text" type="Label" parent="build_menu/selection_box"]
+texture_filter = 6
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -54.5
+offset_top = 6.0
+offset_right = 34.5
+offset_bottom = 29.0
+grow_horizontal = 2
+text = "Build Menu"
+
+[node name="ItemList" type="ItemList" parent="build_menu/selection_box"]
+layout_mode = 0
+offset_top = 31.0
+offset_right = 159.0
+offset_bottom = 309.0
+
+[node name="animations" type="AnimationPlayer" parent="build_menu"]
+libraries = {
+&"": SubResource("AnimationLibrary_1v5rv")
+}

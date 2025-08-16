@@ -4,6 +4,15 @@ const SPEED = 5.0
 const JUMP_VELOCITY = 4.5
 const SENSITIVITY = 0.002
 
+var health = 25.0
+var health_max = 50.0
+var health_regen = .05
+var health_regen_delay = 3
+
+var time_since_damaged = 0
+
+var build_menu_open = true
+
 # Bobbing settings
 const BOB_FREQUENCY = 15.0        # Speed of bob cycle
 const BOB_AMPLITUDE_Y = 0.05     # Vertical bob amount
@@ -19,8 +28,13 @@ func _input(event):
 	if event is InputEventMouseMotion:
 		$Camera.rotation.x = clamp($Camera.rotation.x - event.relative.y * SENSITIVITY, -1.5, 1.5)
 		rotation.y -= event.relative.x * SENSITIVITY
+	if Input.is_action_just_pressed("hide_hud"):
+		$hud.hide()
+	if Input.is_action_just_pressed("toggle_build_menu"):
+		toggle_build_menu()
 
 func _physics_process(delta: float) -> void:
+	time_since_damaged += delta*$hud/clock.day_speed
 	if not is_on_floor():
 		velocity += get_gravity() * delta
 
@@ -49,3 +63,22 @@ func _physics_process(delta: float) -> void:
 		# Smoothly reset position when idle
 		$Camera.position.y = lerp($Camera.position.y, default_camera_position.y, delta * 5.0)
 		$Camera.position.x = lerp($Camera.position.x, default_camera_position.x, delta * 5.0)
+		
+	update_health(delta)
+	
+func update_health(delta):
+	if time_since_damaged >= health_regen_delay:
+		health += (health_regen*delta)*$hud/clock.day_speed
+		print(health)
+	$hud/healthbar.value = lerpf($hud/healthbar.value, health/health_max*100, .2);
+	
+func take_damage(damage):
+	time_since_damaged = 0
+	health -= damage
+
+func toggle_build_menu():
+	build_menu_open = !build_menu_open
+	if build_menu_open:
+		$hud/build_menu/animations.play("toggle_build_menu")
+	else:
+		$hud/build_menu/animations.play_backwards("toggle_build_menu")
