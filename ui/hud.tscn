@@ -125,6 +125,25 @@ loop = false
 rotation = -1.57079
 texture = SubResource("GradientTexture1D_yw30f")
 
+[node name="skip_text" type="Label" parent="clock"]
+visible = false
+texture_filter = 6
+layout_mode = 1
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_left = -90.0
+offset_top = 84.0
+offset_right = 90.0
+offset_bottom = 133.0
+grow_horizontal = 2
+theme_override_constants/line_spacing = -3
+theme_override_font_sizes/font_size = 15
+text = "Skip Day (H)
+0/1"
+horizontal_alignment = 1
+vertical_alignment = 1
+
 [node name="timer" type="Label" parent="clock"]
 texture_filter = 6
 layout_mode = 1
@@ -186,7 +205,6 @@ anchor_right = 0.71875
 anchor_bottom = 0.950617
 grow_horizontal = 2
 grow_vertical = 0
-show_percentage = false
 metadata/_edit_use_anchors_ = true
 
 [node name="build_menu" type="Control" parent="."]
@@ -203,8 +221,6 @@ anchor_top = 0.242284
 anchor_right = 1.0
 anchor_bottom = 0.770062
 grow_horizontal = 2
-grow_vertical = 2
-metadata/_edit_use_anchors_ = true
 
 [node name="scroll_icon" type="Sprite2D" parent="build_menu/selection_box"]
 position = Vector2(124, 17)
@@ -225,10 +241,11 @@ grow_horizontal = 2
 text = "Build Menu"
 
 [node name="ItemList" type="ItemList" parent="build_menu/selection_box"]
-layout_mode = 0
-offset_top = 31.0
-offset_right = 159.0
-offset_bottom = 309.0
+layout_mode = 1
+anchors_preset = -1
+anchor_top = 0.0906432
+anchor_right = 0.999999
+anchor_bottom = 0.903508
 
 [node name="animations" type="AnimationPlayer" parent="build_menu"]
 libraries = {

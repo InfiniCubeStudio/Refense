@@ -1,6 +1,7 @@
-[gd_scene load_steps=7 format=3 uid="uid://dhb6imave8a4x"]
+[gd_scene load_steps=8 format=3 uid="uid://dhb6imave8a4x"]
 
 [ext_resource type="Script" uid="uid://dviobsfi4vu5c" path="res://maps/game.gd" id="1_abrso"]
+[ext_resource type="PackedScene" uid="uid://boyeftqyb1rqe" path="res://player/player.tscn" id="1_d2brg"]
 [ext_resource type="Environment" uid="uid://dqtc5x4iyeifw" path="res://maps/resources/environment.tres" id="2_abrso"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_gynrd"]
@@ -25,6 +26,9 @@ shape = SubResource("BoxShape3D_gynrd")
 [node name="MeshInstance3D" type="MeshInstance3D" parent="MeshInstance3D"]
 transform = Transform3D(10.0747, 0, 0, 0, 0.05, 0, 0, 0, 10.0642, 0, 0, 0)
 mesh = SubResource("BoxMesh_gynrd")
+
+[node name="Player" parent="." instance=ExtResource("1_d2brg")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -0.00102025, 1, 0.0031209)
 
 [node name="Sun" type="DirectionalLight3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 6.26732, 697.665)

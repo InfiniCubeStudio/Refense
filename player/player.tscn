@@ -10,6 +10,7 @@ height = 1.8
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_oul6g"]
 
 [node name="Player" type="CharacterBody3D"]
+collision_layer = 0
 script = ExtResource("1_oul6g")
 
 [node name="Collider" type="CollisionShape3D" parent="."]
@@ -24,3 +25,4 @@ transform = Transform3D(0.8, 0, 0, 0, 0.9, 0, 0, 0, 0.8, 0, 0, 0)
 mesh = SubResource("CapsuleMesh_oul6g")
 
 [node name="hud" parent="." instance=ExtResource("2_rkbax")]
+visible = false

@@ -1,84 +1,107 @@
 extends CharacterBody3D
 
-const SPEED = 5.0
-const JUMP_VELOCITY = 4.5
-const SENSITIVITY = 0.002
+# --- Movement ---
+const SPEED := 5.0
+const JUMP_VELOCITY := 4.5
+const SENSITIVITY := 0.002
+
+# --- Camera bobbing ---
+const BOB_FREQ := 15.0
+const BOB_Y := 0.05
+const BOB_X := 0.02
+var bob_time := 0.0
+var default_cam_pos := Vector3.ZERO
+
+# --- Multiplayer ---
+var is_local := false
+var target_pos := Vector3.ZERO
+
+# --- Other ---
 
 var health = 25.0
 var health_max = 50.0
 var health_regen = .05
 var health_regen_delay = 3
-
 var time_since_damaged = 0
 
 var build_menu_open = true
 
-# Bobbing settings
-const BOB_FREQUENCY = 15.0        # Speed of bob cycle
-const BOB_AMPLITUDE_Y = 0.05     # Vertical bob amount
-const BOB_AMPLITUDE_X = 0.02     # Horizontal bob amount
-var bob_time = 0.0
-var default_camera_position = Vector3.ZERO
-
 func _ready() -> void:
+	default_cam_pos = $Camera.position
 	Input.set_mouse_mode(Input.MOUSE_MODE_CAPTURED)
-	default_camera_position = $Camera.position
 
-func _input(event):
+func _input(event: InputEvent) -> void:
+	if not is_local:
+		return
 	if event is InputEventMouseMotion:
 		$Camera.rotation.x = clamp($Camera.rotation.x - event.relative.y * SENSITIVITY, -1.5, 1.5)
 		rotation.y -= event.relative.x * SENSITIVITY
-	if Input.is_action_just_pressed("hide_hud"):
-		$hud.hide()
+	if Input.is_action_just_pressed("toggle_hud"):
+		$hud.visible = !$hud.visible
 	if Input.is_action_just_pressed("toggle_build_menu"):
 		toggle_build_menu()
 
 func _physics_process(delta: float) -> void:
-	time_since_damaged += delta*$hud/clock.day_speed
+	if is_local:
+		_process_input(delta)
+		_process_health(delta)
+		_process_bobbing(delta)
+		rpc("update_position", global_position)
+	else:
+		global_position = global_position.lerp(target_pos, 0.2)
+
+func _process_input(delta: float) -> void:
+	# Gravity
 	if not is_on_floor():
 		velocity += get_gravity() * delta
 
+	# Jump
 	if Input.is_action_just_pressed("ui_accept") and is_on_floor():
 		velocity.y = JUMP_VELOCITY
 
-	var input_dir := Input.get_vector("left", "right", "up", "down")
-	var direction := (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
-
 	# Movement
-	if direction:
-		velocity.x = direction.x * SPEED
-		velocity.z = direction.z * SPEED
+	var input_dir := Input.get_vector("left","right","up","down")
+	var dir := (transform.basis * Vector3(input_dir.x,0,input_dir.y)).normalized()
+	if dir:
+		velocity.x = dir.x * SPEED
+		velocity.z = dir.z * SPEED
 	else:
 		velocity.x = move_toward(velocity.x, 0, SPEED)
 		velocity.z = move_toward(velocity.z, 0, SPEED)
 
 	move_and_slide()
 
-	# Camera bobbing with side sway
-	if direction.length() > 0 and is_on_floor():
-		bob_time += delta * BOB_FREQUENCY
-		$Camera.position.y = default_camera_position.y + sin(bob_time) * BOB_AMPLITUDE_Y
-		$Camera.position.x = default_camera_position.x + cos(bob_time) * BOB_AMPLITUDE_X
+func _process_bobbing(delta: float) -> void:
+	var input_dir := Input.get_vector("left","right","up","down")
+	if input_dir.length() > 0 and is_on_floor():
+		bob_time += delta * BOB_FREQ
+		$Camera.position.y = default_cam_pos.y + sin(bob_time) * BOB_Y
+		$Camera.position.x = default_cam_pos.x + cos(bob_time) * BOB_X
 	else:
-		# Smoothly reset position when idle
-		$Camera.position.y = lerp($Camera.position.y, default_camera_position.y, delta * 5.0)
-		$Camera.position.x = lerp($Camera.position.x, default_camera_position.x, delta * 5.0)
-		
-	update_health(delta)
-	
-func update_health(delta):
-	if time_since_damaged >= health_regen_delay:
-		health += (health_regen*delta)*$hud/clock.day_speed
-		print(health)
-	$hud/healthbar.value = lerpf($hud/healthbar.value, health/health_max*100, .2);
-	
-func take_damage(damage):
-	time_since_damaged = 0
-	health -= damage
+		$Camera.position.y = lerp($Camera.position.y, default_cam_pos.y, delta*5.0)
+		$Camera.position.x = lerp($Camera.position.x, default_cam_pos.x, delta*5.0)
 
+# --- Networking ---
+@rpc("any_peer", "unreliable")
+func update_position(pos: Vector3) -> void:
+	if is_local:
+		return
+	target_pos = pos
+	
 func toggle_build_menu():
 	build_menu_open = !build_menu_open
 	if build_menu_open:
 		$hud/build_menu/animations.play("toggle_build_menu")
 	else:
 		$hud/build_menu/animations.play_backwards("toggle_build_menu")
+
+# --- Health System ---
+func _process_health(delta: float) -> void:
+	time_since_damaged += $hud/clock.day_speed*delta
+	if time_since_damaged >= health_regen_delay:
+		health += clamp(((health + health_regen) * delta/1000)*$hud/clock.day_speed, 0, health_max)
+	$hud/healthbar.value = lerpf($hud/healthbar.value, (health / health_max) * 100.0, 0.2)
+
+func take_damage(damage: float) -> void:
+	time_since_damaged = 0
+	health = clamp(health - damage, 0, health_max)

@@ -6,7 +6,7 @@ extends Control
 
 var in_game_time = 0.2085;   # 0.0 → start of day, 1.0 → end of day
 var day_length = 480.0;
-var day_speed = 1;
+var day_speed = 1.0;
 var cloud_position = 0.0;
 
 var day = 0;
@@ -26,7 +26,7 @@ func _process(delta):
 	else:
 		day_speed = 1;
 		
-	cloud_position += .008*day_speed
+	cloud_position += .008*(delta*100)*day_speed
 
 	# Move sprite along curve
 	day_marker.progress_ratio = in_game_time
@@ -35,8 +35,8 @@ func _process(delta):
 	_update_sun()
 	_update_shader()
 
-func get_time_string(in_game_time: float) -> String:
-	var total_hours = in_game_time * 24.0
+func get_time_string(time: float) -> String:
+	var total_hours = time * 24.0
 	var hours = int(total_hours) % 24
 	var minutes = int((total_hours - hours) * 60.0)
 
