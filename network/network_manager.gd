@@ -12,6 +12,7 @@ func host_game(port: int = 4242):
 		push_error("Failed to host server: %s" % err)
 		return
 	multiplayer.multiplayer_peer = multiplayer_peer
+	multiplayer.peer_connected.connect(Callable(self, "_on_peer_connected"))
 	print("Server hosted on port ", port)
 	emit_signal("server_ready")
 
@@ -22,14 +23,28 @@ func join_game(ip: String = "127.0.0.1", port: int = 4242):
 		push_error("Failed to connect: %s" % err)
 		return
 	multiplayer.multiplayer_peer = multiplayer_peer
-	multiplayer.peer_connected.connect(Callable(self, "_on_peer_connected"))
 	multiplayer.connected_to_server.connect(Callable(self, "_on_connection_succeeded"))
 	print("Joining ", ip, ":", port)
 
 func _on_peer_connected(id: int) -> void:
 	print("Peer connected: ", id)
+	print(id)
+	if multiplayer.is_server():
+		rpc_id(id, "receive_server_data", _get_server_data())
+		print("Sending serverData")
 	emit_signal("client_connected", id)
 
 func _on_connection_succeeded() -> void:
 	print("Connected to server")
 	emit_signal("client_connected", multiplayer.get_unique_id())
+
+func _get_server_data():
+	var serverData = {}
+	serverData.time = TimeManager.in_game_time
+	print("Compiled serverData: "+str(serverData))
+	return serverData
+
+@rpc("reliable")
+func receive_server_data(serverData) -> void:
+	print("Recieved serverData: "+str(serverData))
+	TimeManager.in_game_time = serverData.time

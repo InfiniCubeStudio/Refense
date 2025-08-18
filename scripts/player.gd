@@ -13,16 +13,17 @@ var bob_time := 0.0
 var default_cam_pos := Vector3.ZERO
 
 # --- Multiplayer ---
+@onready var sync: MultiplayerSynchronizer = $MultiplayerSynchronizer
 var is_local := false
-var target_pos := Vector3.ZERO
+
+@export var synced_position: Vector3
 
 # --- Other ---
-
-var health = 25.0
+@export var health = 50.0
 var health_max = 50.0
-var health_regen = .05
+var health_regen = 0.05
 var health_regen_delay = 3
-var time_since_damaged = 0
+var time_since_damaged = 0.0
 
 var build_menu_open = true
 
@@ -46,9 +47,13 @@ func _physics_process(delta: float) -> void:
 		_process_input(delta)
 		_process_health(delta)
 		_process_bobbing(delta)
-		rpc("update_position", global_position)
+
+		# Update properties for replication
+		synced_position = global_position
 	else:
-		global_position = global_position.lerp(target_pos, 0.2)
+		# Interpolate to received networked values
+		global_position = global_position.lerp(synced_position, 0.2)
+		$hud/healthbar.value = lerpf($hud/healthbar.value, (health / health_max) * 100.0, 0.2)
 
 func _process_input(delta: float) -> void:
 	# Gravity
@@ -60,8 +65,8 @@ func _process_input(delta: float) -> void:
 		velocity.y = JUMP_VELOCITY
 
 	# Movement
-	var input_dir := Input.get_vector("left","right","up","down")
-	var dir := (transform.basis * Vector3(input_dir.x,0,input_dir.y)).normalized()
+	var input_dir := Input.get_vector("left", "right", "up", "down")
+	var dir := (transform.basis * Vector3(input_dir.x, 0, input_dir.y)).normalized()
 	if dir:
 		velocity.x = dir.x * SPEED
 		velocity.z = dir.z * SPEED
@@ -72,22 +77,15 @@ func _process_input(delta: float) -> void:
 	move_and_slide()
 
 func _process_bobbing(delta: float) -> void:
-	var input_dir := Input.get_vector("left","right","up","down")
+	var input_dir := Input.get_vector("left", "right", "up", "down")
 	if input_dir.length() > 0 and is_on_floor():
 		bob_time += delta * BOB_FREQ
 		$Camera.position.y = default_cam_pos.y + sin(bob_time) * BOB_Y
 		$Camera.position.x = default_cam_pos.x + cos(bob_time) * BOB_X
 	else:
-		$Camera.position.y = lerp($Camera.position.y, default_cam_pos.y, delta*5.0)
-		$Camera.position.x = lerp($Camera.position.x, default_cam_pos.x, delta*5.0)
+		$Camera.position.y = lerp($Camera.position.y, default_cam_pos.y, delta * 5.0)
+		$Camera.position.x = lerp($Camera.position.x, default_cam_pos.x, delta * 5.0)
 
-# --- Networking ---
-@rpc("any_peer", "unreliable")
-func update_position(pos: Vector3) -> void:
-	if is_local:
-		return
-	target_pos = pos
-	
 func toggle_build_menu():
 	build_menu_open = !build_menu_open
 	if build_menu_open:
@@ -97,9 +95,13 @@ func toggle_build_menu():
 
 # --- Health System ---
 func _process_health(delta: float) -> void:
-	time_since_damaged += $hud/clock.day_speed*delta
+	time_since_damaged += TimeManager.day_speed * delta
 	if time_since_damaged >= health_regen_delay:
-		health += clamp(((health + health_regen) * delta/1000)*$hud/clock.day_speed, 0, health_max)
+		health = clamp(
+			health + ((health_regen * delta) * TimeManager.day_speed),
+			0,
+			health_max
+		)
 	$hud/healthbar.value = lerpf($hud/healthbar.value, (health / health_max) * 100.0, 0.2)
 
 func take_damage(damage: float) -> void:

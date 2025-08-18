@@ -1,4 +1,4 @@
-[gd_scene load_steps=5 format=3 uid="uid://boyeftqyb1rqe"]
+[gd_scene load_steps=6 format=3 uid="uid://boyeftqyb1rqe"]
 
 [ext_resource type="Script" uid="uid://tjl0dhj5jgm8" path="res://scripts/player.gd" id="1_oul6g"]
 [ext_resource type="PackedScene" uid="uid://dorvikif2db7t" path="res://ui/hud.tscn" id="2_rkbax"]
@@ -8,6 +8,14 @@ radius = 0.4
 height = 1.8
 
 [sub_resource type="CapsuleMesh" id="CapsuleMesh_oul6g"]
+
+[sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_rkbax"]
+properties/0/path = NodePath(".:synced_position")
+properties/0/spawn = true
+properties/0/replication_mode = 2
+properties/1/path = NodePath(".:health")
+properties/1/spawn = true
+properties/1/replication_mode = 2
 
 [node name="Player" type="CharacterBody3D"]
 collision_layer = 0
@@ -26,3 +34,8 @@ mesh = SubResource("CapsuleMesh_oul6g")
 
 [node name="hud" parent="." instance=ExtResource("2_rkbax")]
 visible = false
+
+[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
+replication_interval = 0.1
+delta_interval = 0.1
+replication_config = SubResource("SceneReplicationConfig_rkbax")

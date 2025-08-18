@@ -1,6 +1,6 @@
 [gd_scene load_steps=14 format=3 uid="uid://dorvikif2db7t"]
 
-[ext_resource type="Script" uid="uid://vsvc7votvkka" path="res://scripts/time.gd" id="1_7ihmi"]
+[ext_resource type="Script" uid="uid://dqup7t5vj38ry" path="res://ui/hud.gd" id="1_en2x2"]
 [ext_resource type="Texture2D" uid="uid://bg204ccxtqst" path="res://assets/textures/time/clock.svg" id="2_en2x2"]
 [ext_resource type="Texture2D" uid="uid://csafe405jgb7q" path="res://assets/textures/time/marker.png" id="3_1v5rv"]
 [ext_resource type="Script" uid="uid://bl2dubb2kqc4r" path="res://ui/scripts/fade_text.gd" id="4_q43x7"]
@@ -71,6 +71,7 @@ grow_horizontal = 2
 grow_vertical = 2
 size_flags_horizontal = 3
 size_flags_vertical = 6
+script = ExtResource("1_en2x2")
 
 [node name="clock" type="Control" parent="."]
 layout_mode = 1
@@ -82,7 +83,6 @@ offset_bottom = -15.0
 grow_horizontal = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-script = ExtResource("1_7ihmi")
 
 [node name="clock" type="Sprite2D" parent="clock"]
 texture_filter = 6
@@ -159,7 +159,7 @@ text = "0:00"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="day" type="Label" parent="clock"]
+[node name="day_text" type="Label" parent="clock"]
 texture_filter = 6
 layout_mode = 1
 anchors_preset = 5
