@@ -24,6 +24,7 @@ func join_game(ip: String = "127.0.0.1", port: int = 4242):
 		return
 	multiplayer.multiplayer_peer = multiplayer_peer
 	multiplayer.connected_to_server.connect(Callable(self, "_on_connection_succeeded"))
+	multiplayer.server_disconnected.connect(Callable(self, "_on_server_disconnect"))
 	print("Joining ", ip, ":", port)
 
 func _on_peer_connected(id: int) -> void:
@@ -48,3 +49,8 @@ func _get_server_data():
 func receive_server_data(serverData) -> void:
 	print("Recieved serverData: "+str(serverData))
 	TimeManager.in_game_time = serverData.time
+
+func _on_server_disconnect():
+	get_tree().change_scene_to_file("res://ui/main.tscn")
+	Input.mouse_mode = Input.MOUSE_MODE_VISIBLE
+	MessageHandler.display_message("Lost connection to server.")

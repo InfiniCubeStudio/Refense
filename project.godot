@@ -19,6 +19,7 @@ config/icon="res://icon.svg"
 
 NetworkManager="*res://network/network_manager.gd"
 TimeManager="*res://scripts/time_manager.gd"
+MessageHandler="*res://ui/scripts/message_handler.gd"
 
 [display]
 
