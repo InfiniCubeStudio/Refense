@@ -5,16 +5,16 @@ resource_name = "main_menu"
 script/source = "extends Control
 
 func _on_button_play_pressed() -> void:
-	var status = NetworkManager.host_game()
-	if status != OK:
-		MessageHandler.display_message(\"Failed to host server: \\n\"+str(status),\"Ok\",null)
+	NetworkManager.host_game()
+	get_tree().change_scene_to_file(\"res://maps/level.tscn\")
 
 func _on_button_join_pressed() -> void:
 	var ip = \"127.0.0.1\"
 	var status = NetworkManager.join_game(ip)
-	print(status)
-	if status != OK:
-		MessageHandler.display_message(\"Failed to connect to server: \\n\"+str(status),\"Ok\",null)
+	if status == OK:
+		get_tree().change_scene_to_file(\"res://maps/level.tscn\")
+	else:
+		MessageHandler.display_message(\"Failed to connect to server: \\n\"+str(status))
 "
 
 [node name="main" type="Control"]
