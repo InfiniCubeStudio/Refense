@@ -19,3 +19,4 @@ func _on_time_updated(in_game_time: float, day: int, cycle: String) -> void:
 		day_text.text = "Day " + str(day)
 		next_day_text.text = "Day " + str(day)
 		next_day_text.fade_in_and_out()
+# called every frame. easy fix but i need to redo it

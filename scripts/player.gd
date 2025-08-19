@@ -15,7 +15,7 @@ var default_cam_pos := Vector3.ZERO
 # --- Multiplayer ---
 @onready var sync: MultiplayerSynchronizer = $MultiplayerSynchronizer
 var is_local := false
-
+var username := ""
 @export var synced_position: Vector3
 
 # --- Other ---

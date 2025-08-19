@@ -13,7 +13,7 @@ func _on_button_pressed() -> void:
 	pass # Replace with function body.
 "
 
-[node name="message" type="Control"]
+[node name="MessageBox" type="Control"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -42,7 +42,7 @@ anchor_bottom = 0.660494
 color = Color(0.192157, 0.192157, 0.192157, 0.623529)
 metadata/_edit_use_anchors_ = true
 
-[node name="message" type="Label" parent="."]
+[node name="text" type="Label" parent="."]
 layout_mode = 1
 anchors_preset = -1
 anchor_left = 0.388889
