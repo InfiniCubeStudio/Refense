@@ -1,0 +1,272 @@
+using Godot;
+using System;
+using System.Diagnostics;
+using System.Drawing;
+using System.Numerics;
+using System.Collections.Generic;
+using System.Linq;
+
+
+namespace Generate
+{
+	public partial class Generate: Control {
+		
+		Pathfind path = new Pathfind(128,128,(int)GD.Randi(),-0.1f,1);
+		public override void _Ready(){
+			DisplayCells(path.cells, this, 5);
+		}
+
+		public void DisplayCells(Cell[,] cells, Control parent, int cellSize = 10){
+			// Clear previous children
+			foreach (Node child in parent.GetChildren())
+			{
+				child.QueueFree();
+			}
+
+			int width = cells.GetLength(0);
+			int height = cells.GetLength(1);
+
+			for (int x = 0; x < width; x++)
+			{
+				for (int y = 0; y < height; y++)
+				{
+					ColorRect rect = new ColorRect();
+					rect.Position = new Godot.Vector2(x * cellSize, y * cellSize);
+					rect.Size = new Godot.Vector2(cellSize, cellSize);
+
+					// Determine color
+					Godot.Color color = Colors.Black;
+					if (cells[x, y].Type == CellType.Wall)
+						color = Colors.LightGray;
+					if (cells[x, y].Status == AStar.Closed)
+						color = Colors.Orange;
+					if (cells[x, y].Status == AStar.Open)
+						color = Colors.LimeGreen;
+					if (cells[x, y].Direction != Dir.None)
+						color = Colors.Purple;
+					if (cells[x, y].Type == CellType.Start)
+						color = Colors.Green;
+					if (cells[x, y].Type == CellType.End)
+						color = Colors.Red;
+
+					rect.Color = color;
+					parent.AddChild(rect);
+				}
+			}
+		}
+	}
+
+	public enum AStar {
+		Unchecked = 0,
+		Open = 1,
+		Closed = 2
+	}
+
+	public enum Dir {
+		Up = 0,
+		Right = 1,
+		Down = 2,
+		Left = 3,
+		None = 4
+	}
+
+	public enum CellType {
+		None = 0,
+		Wall = 1,
+		Start = 2,
+		End = 3
+	}
+
+	public class Cell {
+		/// <summary>
+		/// Whether or not the cell is a wall
+		/// </summary>
+		public CellType Type;
+		/// <summary>
+		/// Total cost
+		/// </summary>
+		public float FCost = float.MaxValue;
+		/// <summary>
+		/// Cost to start
+		/// </summary>
+		public float GCost = float.MaxValue;
+		/// <summary>
+		/// Cost to end
+		/// </summary>
+		public float HCost = float.MaxValue;
+		/// <summary>
+		/// A* status of the cell
+		/// </summary>
+		public AStar Status = AStar.Unchecked;
+		/// <summary>
+		/// Direction to the next cell
+		/// </summary>
+		public Dir Direction = Dir.None;
+
+		public Cell(CellType type) {
+			Type = type;
+		}
+	}
+
+	public class Pathfind {
+		public Cell[,] cells;
+
+		/// <summary>
+		/// 
+		/// </summary>
+		/// <param name="width">Width of the map</param>
+		/// <param name="height">Height of the map</param>
+		/// <param name="seed">Random seed</param>
+		/// <param name="threshold">Noise threshold <para/>-1 means no walls, 1 means 100% walls, -0.5 is a good value</param>
+		/// <param name="endPointCount"></param>
+		public Pathfind(int width, int height, int seed, float threshold, int endPointCount) {
+
+			// Setup
+			FastNoiseLite noise = new FastNoiseLite();
+			noise.Seed = seed;
+			Random rnd = new Random(seed);
+			cells = new Cell[width, height];
+
+			// Create walls
+			for(int x = 0; x < width; x++) {
+				for (int y = 0; y < height; y++) {
+					if(noise.GetNoise2D((float)x * 12f, (float)y * 12f) < threshold) {
+						cells[x, y] = new Cell(CellType.Wall);
+					} else {
+						cells[x, y] = new Cell(CellType.None);
+					}
+				}
+			}
+
+			// Create starting position
+			Point start;
+			do {
+				start = new Point(rnd.Next(width), rnd.Next(height));
+			} while (cells[start.X, start.Y].Type == CellType.Wall);
+			cells[start.X, start.Y].Type = CellType.Start;
+
+			// Create End positions
+			List<Point> ends = new List<Point>();
+			int iterations = 0;
+			for (int p = 0; p < endPointCount; p++) {
+				ends.Add(new Point());
+				int distance;
+				iterations = 0;
+				do {
+					iterations++;
+					ends[ends.Count - 1] = new Point(rnd.Next(width), rnd.Next(height));
+					distance = Math.Abs(ends[ends.Count - 1].X - start.X) + Math.Abs(ends[ends.Count - 1].Y - start.Y);
+					if (iterations == 5000) {
+						break;
+					}
+				} while (cells[ends[ends.Count - 1].X, ends[ends.Count - 1].Y].Type == CellType.Wall || distance < (width + height) * 0.3f);
+			}
+
+			if(iterations != 5000) {
+				foreach (Point p in ends) {
+					cells[p.X, p.Y].Type = CellType.End;
+				}
+				bool pathExists = false;
+				// Pathfind to end points
+				for (int e = 0; e < endPointCount; e++) {
+					cells[start.X, start.Y].Status = AStar.Open;
+					cells[start.X, start.Y].GCost = 0;
+					cells[start.X, start.Y].HCost = System.Numerics.Vector2.Distance(new System.Numerics.Vector2(start.X, start.Y), new System.Numerics.Vector2(ends[e].X, ends[e].Y));
+					cells[start.X, start.Y].FCost = cells[start.X, start.Y].GCost + cells[start.X, start.Y].HCost;
+					bool solved = false;
+					while (!solved) {
+						List<(int X, int Y, Cell cell)> OpenCells = new List<(int X, int Y, Cell cell)>();
+						for (int x = 0; x < width; x++) {
+							for (int y = 0; y < height; y++) {
+								if (cells[x, y].Status == AStar.Open) {
+									OpenCells.Add((x, y, cells[x, y]));
+								}
+							}
+						}
+						var temp = OpenCells.OrderBy(x => x.cell.FCost).ThenBy(x => x.cell.HCost);
+						if(temp.Count() == 0)
+							goto BreakOut;
+						var c = temp.First();
+						if (c.cell.Type == CellType.End) {
+							solved = true;
+						} else {
+							c.cell.Status = AStar.Closed;
+							if (c.X - 1 >= 0 && cells[c.X - 1, c.Y].Type != CellType.Wall) {
+								cells[c.X - 1, c.Y].Status = (AStar)Math.Max((int)cells[c.X - 1, c.Y].Status, (int)AStar.Open);
+								cells[c.X - 1, c.Y].GCost = Math.Min(cells[c.X - 1, c.Y].GCost, cells[c.X, c.Y].GCost + 1);
+								cells[c.X - 1, c.Y].HCost = System.Numerics.Vector2.Distance(new System.Numerics.Vector2(c.X - 1, c.Y), new System.Numerics.Vector2(ends[e].X, ends[e].Y));
+								cells[c.X - 1, c.Y].FCost = cells[c.X - 1, c.Y].GCost + cells[c.X - 1, c.Y].HCost;
+							}
+							if (c.X + 1 < cells.GetLength(0) && cells[c.X + 1, c.Y].Type != CellType.Wall) {
+								cells[c.X + 1, c.Y].Status = (AStar)Math.Max((int)cells[c.X + 1, c.Y].Status, (int)AStar.Open);
+								cells[c.X + 1, c.Y].GCost = Math.Min(cells[c.X + 1, c.Y].GCost, cells[c.X, c.Y].GCost + 1);
+								cells[c.X + 1, c.Y].HCost = System.Numerics.Vector2.Distance(new System.Numerics.Vector2(c.X + 1, c.Y), new System.Numerics.Vector2(ends[e].X, ends[e].Y));
+								cells[c.X + 1, c.Y].FCost = cells[c.X + 1, c.Y].GCost + cells[c.X + 1, c.Y].HCost;
+							}
+							if (c.Y - 1 >= 0 && cells[c.X, c.Y - 1].Type != CellType.Wall) {
+								cells[c.X, c.Y - 1].Status = (AStar)Math.Max((int)cells[c.X, c.Y - 1].Status, (int)AStar.Open);
+								cells[c.X, c.Y - 1].GCost = Math.Min(cells[c.X, c.Y - 1].GCost, cells[c.X, c.Y].GCost + 1);
+								cells[c.X, c.Y - 1].HCost = System.Numerics.Vector2.Distance(new System.Numerics.Vector2(c.X, c.Y - 1), new System.Numerics.Vector2(ends[e].X, ends[e].Y));
+								cells[c.X, c.Y - 1].FCost = cells[c.X, c.Y - 1].GCost + cells[c.X, c.Y - 1].HCost;
+							}
+							if (c.Y + 1 < cells.GetLength(1) && cells[c.X, c.Y + 1].Type != CellType.Wall) {
+								cells[c.X, c.Y + 1].Status = (AStar)Math.Max((int)cells[c.X, c.Y + 1].Status, (int)AStar.Open);
+								cells[c.X, c.Y + 1].GCost = Math.Min(cells[c.X, c.Y + 1].GCost, cells[c.X, c.Y].GCost + 1);
+								cells[c.X, c.Y + 1].HCost = System.Numerics.Vector2.Distance(new System.Numerics.Vector2(c.X, c.Y + 1), new System.Numerics.Vector2(ends[e].X, ends[e].Y));
+								cells[c.X, c.Y + 1].FCost = cells[c.X, c.Y + 1].GCost + cells[c.X, c.Y + 1].HCost;
+							}
+						}
+					}
+
+					// Trace path backwards
+					bool pathFinished = false;
+					Point p = ends[e];
+					while (!pathFinished) {
+						List<(int X, int Y, Cell cell)> temp = new List<(int X, int Y, Cell cell)>();
+						if (p.X - 1 >= 0 && cells[p.X - 1, p.Y].Type != CellType.Wall) {
+							temp.Add((p.X - 1, p.Y, cells[p.X - 1, p.Y]));
+						}
+						if (p.X + 1 <= cells.GetLength(0) && cells[p.X + 1, p.Y].Type != CellType.Wall) {
+							temp.Add((p.X + 1, p.Y, cells[p.X + 1, p.Y]));
+						}
+						if (p.Y - 1 >= 0 && cells[p.X, p.Y - 1].Type != CellType.Wall) {
+							temp.Add((p.X, p.Y - 1, cells[p.X, p.Y - 1]));
+						}
+						if (p.Y + 1 <= cells.GetLength(1) && cells[p.X, p.Y + 1].Type != CellType.Wall) {
+							temp.Add((p.X, p.Y + 1, cells[p.X, p.Y + 1]));
+						}
+						var next = temp.OrderBy(x => x.cell.GCost).First();
+
+						if (next.X == p.X - 1)
+							next.cell.Direction = Dir.Right;
+						if (next.X == p.X + 1)
+							next.cell.Direction = Dir.Left;
+						if (next.Y == p.Y - 1)
+							next.cell.Direction = Dir.Up;
+						if (next.Y == p.Y + 1)
+							next.cell.Direction = Dir.Down;
+
+						p = new Point(next.X, next.Y);
+
+						if (p == start)
+							pathFinished = true;
+					}
+
+				}
+				pathExists = true;
+				BreakOut:;
+				if (pathExists == false) {
+					// There is no path to the end point
+					Debug.WriteLine("No path exists, lower the threshold");
+				}
+				
+			} else {
+				// Cannot generate End points far enough
+				Debug.WriteLine("Cannot generate end points far enough away");
+			}
+
+		}
+
+	}
+
+}

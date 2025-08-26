@@ -1,0 +1,8 @@
+[gd_scene load_steps=2 format=3 uid="uid://bgx0fqvjfjq6a"]
+
+[ext_resource type="Script" uid="uid://cgspvbadxll3u" path="res://scripts/generation/Generate.cs" id="1_1l4lr"]
+
+[node name="Gentest" type="Control"]
+layout_mode = 3
+anchors_preset = 0
+script = ExtResource("1_1l4lr")

@@ -12,7 +12,7 @@ config_version=5
 
 config/name="Refense"
 run/main_scene="uid://cetpmul0mnvdi"
-config/features=PackedStringArray("4.4", "Mobile")
+config/features=PackedStringArray("4.4", "C#", "Mobile")
 config/icon="res://icon.svg"
 
 [autoload]
@@ -25,6 +25,10 @@ MessageHandler="*res://ui/scripts/message_handler.gd"
 
 window/stretch/mode="canvas_items"
 window/stretch/aspect="keep_width"
+
+[dotnet]
+
+project/assembly_name="Refense"
 
 [input]
 
