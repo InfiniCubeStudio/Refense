@@ -2,15 +2,15 @@ using Godot;
 using System;
 using System.Diagnostics;
 using System.Drawing;
-using System.Numerics;
 using System.Collections.Generic;
 using System.Linq;
+using nVector2 = System.Numerics.Vector2;
 
 namespace Generate
 {
 	public partial class Generate : Node3D
 	{
-		Pathfind path = new Pathfind(100, 100, (int)GD.Randi(), -0.3f, 1);
+		Pathfind path = new Pathfind(1000, 1000, (int)GD.Randi(), -0.3f, 1);
 
 		public override void _Ready()
 		{
@@ -108,14 +108,42 @@ namespace Generate
 		}
 
 
-		 Mesh GenerateMesh(Cell[,] cells, float cellSize, float wallHeight){
+		 Mesh GenerateMesh(Cell[,] cells, float cellSize, float wallHeight)
+		{
 			int width = cells.GetLength(0);
 			int height = cells.GetLength(1);
 
-			ArrayMesh mesh = new ArrayMesh();
-			SurfaceTool tool = new SurfaceTool();
-			tool.Begin(Mesh.PrimitiveType.Triangles);
+			List<Godot.Vector3> vertices = new List<Godot.Vector3>();
+			List<int> indices = new List<int>();
+			List<Godot.Vector3> normals = new List<Godot.Vector3>();
 
+			int indexOffset = 0;
+
+			void AddQuad(Godot.Vector3 v0, Godot.Vector3 v1, Godot.Vector3 v2, Godot.Vector3 v3, Godot.Vector3 normal)
+			{
+				vertices.Add(v0);
+				vertices.Add(v1);
+				vertices.Add(v2);
+				vertices.Add(v3);
+
+				normals.Add(normal);
+				normals.Add(normal);
+				normals.Add(normal);
+				normals.Add(normal);
+
+				// Two triangles
+				indices.Add(indexOffset + 0);
+				indices.Add(indexOffset + 1);
+				indices.Add(indexOffset + 2);
+
+				indices.Add(indexOffset + 2);
+				indices.Add(indexOffset + 3);
+				indices.Add(indexOffset + 0);
+
+				indexOffset += 4;
+			}
+
+			// Loop cells
 			for (int x = 0; x < width; x++)
 			{
 				for (int y = 0; y < height; y++)
@@ -125,53 +153,73 @@ namespace Generate
 
 					Godot.Vector3 pos = new Godot.Vector3(x * cellSize, 0, y * cellSize);
 
-					// Top face
-					tool.SetColor(Godot.Colors.Gray);
-
-					// Check neighbors for sides
 					bool left = x == 0 || cells[x - 1, y].Type != CellType.Wall;
 					bool right = x == width - 1 || cells[x + 1, y].Type != CellType.Wall;
 					bool front = y == 0 || cells[x, y - 1].Type != CellType.Wall;
 					bool back = y == height - 1 || cells[x, y + 1].Type != CellType.Wall;
 
-					// Front (-Z)
-					if (front) AddQuad(tool,
-						pos + new Godot.Vector3(0, 0, 0),
-						pos + new Godot.Vector3(cellSize, 0, 0),
+					// Top
+					AddQuad(
+						pos + new Godot.Vector3(0, wallHeight, 0),
 						pos + new Godot.Vector3(cellSize, wallHeight, 0),
-						pos + new Godot.Vector3(0, wallHeight, 0)
-					);
-
-					// Back (+Z)
-					if (back) AddQuad(tool,
-						pos + new Godot.Vector3(0, 0, cellSize),
-						pos + new Godot.Vector3(cellSize, 0, cellSize),
 						pos + new Godot.Vector3(cellSize, wallHeight, cellSize),
-						pos + new Godot.Vector3(0, wallHeight, cellSize),true
-					);
-
-					// Left (-X)
-					if (left) AddQuad(tool,
-						pos + new Godot.Vector3(0, 0, 0),
-						pos + new Godot.Vector3(0, 0, cellSize),
 						pos + new Godot.Vector3(0, wallHeight, cellSize),
-						pos + new Godot.Vector3(0, wallHeight, 0),true
+						new Godot.Vector3(0, 1, 0)
 					);
 
-					// Right (+X)
-					if (right) AddQuad(tool,
-						pos + new Godot.Vector3(cellSize, 0, 0),
-						pos + new Godot.Vector3(cellSize, 0, cellSize),
-						pos + new Godot.Vector3(cellSize, wallHeight, cellSize),
-						pos + new Godot.Vector3(cellSize, wallHeight, 0)
-					);
+					if (front)
+						AddQuad(
+							pos + new Godot.Vector3(0, 0, 0),
+							pos + new Godot.Vector3(cellSize, 0, 0),
+							pos + new Godot.Vector3(cellSize, wallHeight, 0),
+							pos + new Godot.Vector3(0, wallHeight, 0),
+							new Godot.Vector3(0, 0, -1)
+						);
+
+					if (back)
+						AddQuad(
+							pos + new Godot.Vector3(cellSize, 0, cellSize),
+							pos + new Godot.Vector3(0, 0, cellSize),
+							pos + new Godot.Vector3(0, wallHeight, cellSize),
+							pos + new Godot.Vector3(cellSize, wallHeight, cellSize),
+							new Godot.Vector3(0, 0, 1)
+						);
+
+					if (left)
+						AddQuad(
+							pos + new Godot.Vector3(0, 0, cellSize),
+							pos + new Godot.Vector3(0, 0, 0),
+							pos + new Godot.Vector3(0, wallHeight, 0),
+							pos + new Godot.Vector3(0, wallHeight, cellSize),
+							new Godot.Vector3(-1, 0, 0)
+						);
+
+					if (right)
+						AddQuad(
+							pos + new Godot.Vector3(cellSize, 0, 0),
+							pos + new Godot.Vector3(cellSize, 0, cellSize),
+							pos + new Godot.Vector3(cellSize, wallHeight, cellSize),
+							pos + new Godot.Vector3(cellSize, wallHeight, 0),
+							new Godot.Vector3(1, 0, 0)
+						);
 				}
 			}
 
-			tool.GenerateNormals();
-			return tool.Commit();
+			// Pack into ArrayMesh
+			var arrays = new Godot.Collections.Array();
+			arrays.Resize((int)Mesh.ArrayType.Max);
+
+			arrays[(int)Mesh.ArrayType.Vertex] = vertices.ToArray();
+			arrays[(int)Mesh.ArrayType.Index] = indices.ToArray();
+			arrays[(int)Mesh.ArrayType.Normal] = normals.ToArray();
+
+			ArrayMesh mesh = new ArrayMesh();
+			mesh.AddSurfaceFromArrays(Mesh.PrimitiveType.Triangles, arrays);
+
+			return mesh;
 		}
 	}
+
 
 
 	public enum AStar {
@@ -238,6 +286,7 @@ namespace Generate
 		/// <param name="threshold">Noise threshold <para/>-1 means no walls, 1 means 100% walls, -0.5 is a good value</param>
 		/// <param name="endPointCount"></param>
 		public Pathfind(int width, int height, int seed, float threshold, int endPointCount) {
+			Stopwatch sw = Stopwatch.StartNew();
 
 			// Setup
 			FastNoiseLite noise = new FastNoiseLite();
@@ -256,12 +305,18 @@ namespace Generate
 				}
 			}
 
+			Debug.WriteLine($"Make noise - {sw.Elapsed.TotalMicroseconds} us");
+			sw.Restart();
+
 			// Create starting position
 			Point start;
 			do {
 				start = new Point(rnd.Next(width), rnd.Next(height));
 			} while (cells[start.X, start.Y].Type == CellType.Wall);
 			cells[start.X, start.Y].Type = CellType.Start;
+
+			Debug.WriteLine($"Start pos - {sw.Elapsed.TotalMicroseconds} us");
+			sw.Restart();
 
 			// Create End positions
 			List<Point> ends = new List<Point>();
@@ -280,77 +335,104 @@ namespace Generate
 				} while (cells[ends[ends.Count - 1].X, ends[ends.Count - 1].Y].Type == CellType.Wall || distance < (width + height) * 0.3f);
 			}
 
-			if(iterations != 5000) {
+			Debug.WriteLine($"End pos - {sw.Elapsed.TotalMicroseconds} us");
+			sw.Restart();
+
+			if (iterations != 5000) {
+
 				foreach (Point p in ends) {
 					cells[p.X, p.Y].Type = CellType.End;
 				}
 				bool pathExists = false;
 				// Pathfind to end points
 				for (int e = 0; e < endPointCount; e++) {
+					
 					cells[start.X, start.Y].Status = AStar.Open;
 					cells[start.X, start.Y].GCost = 0;
-					cells[start.X, start.Y].HCost = System.Numerics.Vector2.Distance(new System.Numerics.Vector2(start.X, start.Y), new System.Numerics.Vector2(ends[e].X, ends[e].Y));
+					cells[start.X, start.Y].HCost = nVector2.Distance(new nVector2(start.X, start.Y), new nVector2(ends[e].X, ends[e].Y));
 					cells[start.X, start.Y].FCost = cells[start.X, start.Y].GCost + cells[start.X, start.Y].HCost;
 					bool solved = false;
-					while (!solved) {
-						List<(int X, int Y, Cell cell)> OpenCells = new List<(int X, int Y, Cell cell)>();
-						for (int x = 0; x < width; x++) {
-							for (int y = 0; y < height; y++) {
-								if (cells[x, y].Status == AStar.Open) {
-									OpenCells.Add((x, y, cells[x, y]));
-								}
+					HashSet<(int X, int Y, Cell cell)> OpenCells = new HashSet<(int X, int Y, Cell cell)>();
+					for (int x = 0; x < width; x++) {
+						for (int y = 0; y < height; y++) {
+							if (cells[x, y].Status == AStar.Open) {
+								OpenCells.Add((x, y, cells[x, y]));
 							}
 						}
+					}
+					while (!solved) {
+						
 						var temp = OpenCells.OrderBy(x => x.cell.FCost).ThenBy(x => x.cell.HCost);
 						if(temp.Count() == 0)
 							goto BreakOut;
+
 						var c = temp.First();
 						if (c.cell.Type == CellType.End) {
 							solved = true;
 						} else {
 							c.cell.Status = AStar.Closed;
+							OpenCells.Remove(c);
 							if (c.X - 1 >= 0 && cells[c.X - 1, c.Y].Type != CellType.Wall) {
-								cells[c.X - 1, c.Y].Status = (AStar)Math.Max((int)cells[c.X - 1, c.Y].Status, (int)AStar.Open);
+								AStar status = (AStar)Math.Max((int)cells[c.X - 1, c.Y].Status, (int)AStar.Open);
+								cells[c.X - 1, c.Y].Status = status;
+								if(status == AStar.Open) {
+									OpenCells.Add((c.X - 1, c.Y, cells[c.X - 1, c.Y]));
+								}
 								cells[c.X - 1, c.Y].GCost = Math.Min(cells[c.X - 1, c.Y].GCost, cells[c.X, c.Y].GCost + 1);
-								cells[c.X - 1, c.Y].HCost = System.Numerics.Vector2.Distance(new System.Numerics.Vector2(c.X - 1, c.Y), new System.Numerics.Vector2(ends[e].X, ends[e].Y));
+								cells[c.X - 1, c.Y].HCost = nVector2.Distance(new nVector2(c.X - 1, c.Y), new nVector2(ends[e].X, ends[e].Y));
 								cells[c.X - 1, c.Y].FCost = cells[c.X - 1, c.Y].GCost + cells[c.X - 1, c.Y].HCost;
 							}
 							if (c.X + 1 < cells.GetLength(0) && cells[c.X + 1, c.Y].Type != CellType.Wall) {
-								cells[c.X + 1, c.Y].Status = (AStar)Math.Max((int)cells[c.X + 1, c.Y].Status, (int)AStar.Open);
+								AStar status = (AStar)Math.Max((int)cells[c.X + 1, c.Y].Status, (int)AStar.Open);
+								cells[c.X + 1, c.Y].Status = status;
+								if (status == AStar.Open) {
+									OpenCells.Add((c.X + 1, c.Y, cells[c.X + 1, c.Y]));
+								}
 								cells[c.X + 1, c.Y].GCost = Math.Min(cells[c.X + 1, c.Y].GCost, cells[c.X, c.Y].GCost + 1);
-								cells[c.X + 1, c.Y].HCost = System.Numerics.Vector2.Distance(new System.Numerics.Vector2(c.X + 1, c.Y), new System.Numerics.Vector2(ends[e].X, ends[e].Y));
+								cells[c.X + 1, c.Y].HCost = nVector2.Distance(new nVector2(c.X + 1, c.Y), new nVector2(ends[e].X, ends[e].Y));
 								cells[c.X + 1, c.Y].FCost = cells[c.X + 1, c.Y].GCost + cells[c.X + 1, c.Y].HCost;
 							}
 							if (c.Y - 1 >= 0 && cells[c.X, c.Y - 1].Type != CellType.Wall) {
-								cells[c.X, c.Y - 1].Status = (AStar)Math.Max((int)cells[c.X, c.Y - 1].Status, (int)AStar.Open);
+								AStar status = (AStar)Math.Max((int)cells[c.X, c.Y - 1].Status, (int)AStar.Open);
+								cells[c.X, c.Y - 1].Status = status;
+								if (status == AStar.Open) {
+									OpenCells.Add((c.X, c.Y - 1, cells[c.X, c.Y - 1]));
+								}
 								cells[c.X, c.Y - 1].GCost = Math.Min(cells[c.X, c.Y - 1].GCost, cells[c.X, c.Y].GCost + 1);
-								cells[c.X, c.Y - 1].HCost = System.Numerics.Vector2.Distance(new System.Numerics.Vector2(c.X, c.Y - 1), new System.Numerics.Vector2(ends[e].X, ends[e].Y));
+								cells[c.X, c.Y - 1].HCost = nVector2.Distance(new nVector2(c.X, c.Y - 1), new nVector2(ends[e].X, ends[e].Y));
 								cells[c.X, c.Y - 1].FCost = cells[c.X, c.Y - 1].GCost + cells[c.X, c.Y - 1].HCost;
 							}
 							if (c.Y + 1 < cells.GetLength(1) && cells[c.X, c.Y + 1].Type != CellType.Wall) {
-								cells[c.X, c.Y + 1].Status = (AStar)Math.Max((int)cells[c.X, c.Y + 1].Status, (int)AStar.Open);
+								AStar status = (AStar)Math.Max((int)cells[c.X, c.Y + 1].Status, (int)AStar.Open);
+								cells[c.X, c.Y + 1].Status = status;
+								if (status == AStar.Open) {
+									OpenCells.Add((c.X, c.Y + 1, cells[c.X, c.Y + 1]));
+								}
 								cells[c.X, c.Y + 1].GCost = Math.Min(cells[c.X, c.Y + 1].GCost, cells[c.X, c.Y].GCost + 1);
-								cells[c.X, c.Y + 1].HCost = System.Numerics.Vector2.Distance(new System.Numerics.Vector2(c.X, c.Y + 1), new System.Numerics.Vector2(ends[e].X, ends[e].Y));
+								cells[c.X, c.Y + 1].HCost = nVector2.Distance(new nVector2(c.X, c.Y + 1), new nVector2(ends[e].X, ends[e].Y));
 								cells[c.X, c.Y + 1].FCost = cells[c.X, c.Y + 1].GCost + cells[c.X, c.Y + 1].HCost;
 							}
 						}
 					}
+					
+					Debug.WriteLine($"Pathfind to end - {sw.Elapsed.TotalMicroseconds} us");
+					sw.Restart();
 
 					// Trace path backwards
 					bool pathFinished = false;
 					Point p = ends[e];
 					while (!pathFinished) {
 						List<(int X, int Y, Cell cell)> temp = new List<(int X, int Y, Cell cell)>();
-						if (p.X - 1 > 0 && cells[p.X - 1, p.Y].Type != CellType.Wall) {
+						if (p.X - 1 >= 0 && cells[p.X - 1, p.Y].Type != CellType.Wall) {
 							temp.Add((p.X - 1, p.Y, cells[p.X - 1, p.Y]));
 						}
-						if (p.X + 1 < cells.GetLength(0) && cells[p.X + 1, p.Y].Type != CellType.Wall) {
+						if (p.X + 1 <= cells.GetLength(0) && cells[p.X + 1, p.Y].Type != CellType.Wall) {
 							temp.Add((p.X + 1, p.Y, cells[p.X + 1, p.Y]));
 						}
-						if (p.Y - 1 > 0 && cells[p.X, p.Y - 1].Type != CellType.Wall) {
+						if (p.Y - 1 >= 0 && cells[p.X, p.Y - 1].Type != CellType.Wall) {
 							temp.Add((p.X, p.Y - 1, cells[p.X, p.Y - 1]));
 						}
-						if (p.Y + 1 < cells.GetLength(1) && cells[p.X, p.Y + 1].Type != CellType.Wall) {
+						if (p.Y + 1 <= cells.GetLength(1) && cells[p.X, p.Y + 1].Type != CellType.Wall) {
 							temp.Add((p.X, p.Y + 1, cells[p.X, p.Y + 1]));
 						}
 						var next = temp.OrderBy(x => x.cell.GCost).First();
@@ -382,6 +464,9 @@ namespace Generate
 				// Cannot generate End points far enough
 				Debug.WriteLine("Cannot generate end points far enough away");
 			}
+
+			Debug.WriteLine($"Trace path back - {sw.Elapsed.TotalMicroseconds} us");
+			sw.Stop();
 
 		}
 
