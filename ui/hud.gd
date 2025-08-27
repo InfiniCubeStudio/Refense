@@ -20,3 +20,6 @@ func _on_time_updated(in_game_time: float, day: int, cycle: String) -> void:
 		next_day_text.text = "Day " + str(day)
 		next_day_text.fade_in_and_out()
 # called every frame. easy fix but i need to redo it
+
+func _process(delta: float) -> void:
+	$debug.text = str(Engine.get_frames_per_second())+"\n"+str(Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME))

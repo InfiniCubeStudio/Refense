@@ -2,7 +2,7 @@ extends CharacterBody3D
 
 # --- Movement ---
 const SPEED := 5.0
-const JUMP_VELOCITY := 4.5
+const JUMP_VELOCITY := 6
 const SENSITIVITY := 0.002
 
 # --- Camera bobbing ---
@@ -14,7 +14,7 @@ var default_cam_pos := Vector3.ZERO
 
 # --- Multiplayer ---
 @onready var sync: MultiplayerSynchronizer = $MultiplayerSynchronizer
-var is_local := false
+var is_local := true
 var username := ""
 @export var synced_position: Vector3
 
@@ -26,6 +26,7 @@ var health_regen_delay = 3
 var time_since_damaged = 0.0
 
 var build_menu_open = true
+var debug = true
 
 func _ready() -> void:
 	default_cam_pos = $Camera.position
@@ -41,19 +42,39 @@ func _input(event: InputEvent) -> void:
 		$hud.visible = !$hud.visible
 	if Input.is_action_just_pressed("toggle_build_menu"):
 		toggle_build_menu()
+	if Input.is_action_just_pressed("debug"):
+		debug = !debug
 
 func _physics_process(delta: float) -> void:
-	if is_local:
+	if is_local and not debug:
 		_process_input(delta)
 		_process_health(delta)
 		_process_bobbing(delta)
 
 		# Update properties for replication
 		synced_position = global_position
+	elif is_local and debug:
+		_process_debug_input(delta)
 	else:
 		# Interpolate to received networked values
 		global_position = global_position.lerp(synced_position, 0.2)
 		$hud/healthbar.value = lerpf($hud/healthbar.value, (health / health_max) * 100.0, 0.2)
+
+func _process_debug_input(delta: float) -> void:
+	var input_dir := Input.get_vector("left", "right", "up", "down")
+	if input_dir == Vector2.ZERO:
+		return
+	
+	# Get the forward and right directions from the camera’s rotation
+	var cam = $Camera # replace with your camera node
+	var forward = cam.global_transform.basis.z.normalized()
+	var right = cam.global_transform.basis.x.normalized()
+	
+	# Combine input with camera orientation
+	var dir = (right * input_dir.x + forward * input_dir.y).normalized()
+	
+	# Move player in full 3D (including pitch)
+	position += dir * delta * 10.0
 
 func _process_input(delta: float) -> void:
 	# Gravity

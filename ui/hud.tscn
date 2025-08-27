@@ -251,3 +251,8 @@ anchor_bottom = 0.903508
 libraries = {
 &"": SubResource("AnimationLibrary_1v5rv")
 }
+
+[node name="debug" type="Label" parent="."]
+layout_mode = 0
+offset_right = 40.0
+offset_bottom = 23.0

@@ -6,55 +6,173 @@ using System.Numerics;
 using System.Collections.Generic;
 using System.Linq;
 
-
 namespace Generate
 {
-	public partial class Generate: Control {
-		
-		Pathfind path = new Pathfind(128,128,(int)GD.Randi(),-0.1f,1);
-		public override void _Ready(){
-			DisplayCells(path.cells, this, 5);
+	public partial class Generate : Node3D
+	{
+		Pathfind path = new Pathfind(100, 100, (int)GD.Randi(), -0.3f, 1);
+
+		public override void _Ready()
+		{
+			StaticBody3D staticBody = new StaticBody3D();
+			AddChild(staticBody);
+
+			// Your visible mesh
+			MeshInstance3D meshInstance = new MeshInstance3D();
+			meshInstance.Mesh = GenerateMesh(path.cells, 0.1f, 1f);
+			staticBody.AddChild(meshInstance);
+
+			// Optimized collision
+			GenerateCollision(staticBody, path.cells, 0.1f, 1f);
 		}
 
-		public void DisplayCells(Cell[,] cells, Control parent, int cellSize = 10){
-			// Clear previous children
-			foreach (Node child in parent.GetChildren())
-			{
-				child.QueueFree();
-			}
-
+		
+		void GenerateCollision(StaticBody3D staticBody, Cell[,] cells, float cellSize, float wallHeight){
 			int width = cells.GetLength(0);
 			int height = cells.GetLength(1);
+			bool[,] handled = new bool[width, height];
 
 			for (int x = 0; x < width; x++)
 			{
 				for (int y = 0; y < height; y++)
 				{
-					ColorRect rect = new ColorRect();
-					rect.Position = new Godot.Vector2(x * cellSize, y * cellSize);
-					rect.Size = new Godot.Vector2(cellSize, cellSize);
+					if (handled[x, y] || cells[x, y].Type != CellType.Wall)
+						continue;
 
-					// Determine color
-					Godot.Color color = Colors.Black;
-					if (cells[x, y].Type == CellType.Wall)
-						color = Colors.LightGray;
-					if (cells[x, y].Status == AStar.Closed)
-						color = Colors.Orange;
-					if (cells[x, y].Status == AStar.Open)
-						color = Colors.LimeGreen;
-					if (cells[x, y].Direction != Dir.None)
-						color = Colors.Purple;
-					if (cells[x, y].Type == CellType.Start)
-						color = Colors.Green;
-					if (cells[x, y].Type == CellType.End)
-						color = Colors.Red;
+					// Expand in X
+					int endX = x;
+					while (endX + 1 < width && !handled[endX + 1, y] && cells[endX + 1, y].Type == CellType.Wall)
+						endX++;
 
-					rect.Color = color;
-					parent.AddChild(rect);
+					// Expand in Y
+					int endY = y;
+					bool canExpandY;
+					do
+					{
+						canExpandY = true;
+						for (int xi = x; xi <= endX; xi++)
+						{
+							if (endY + 1 >= height || handled[xi, endY + 1] || cells[xi, endY + 1].Type != CellType.Wall)
+							{
+								canExpandY = false;
+								break;
+							}
+						}
+						if (canExpandY) endY++;
+					} while (canExpandY);
+
+					// Create BoxShape
+					var box = new BoxShape3D();
+					float boxWidth = (endX - x + 1) * cellSize;
+					float boxDepth = (endY - y + 1) * cellSize;
+					box.Size = new Godot.Vector3(boxWidth, wallHeight, boxDepth);
+
+					var collisionShape = new CollisionShape3D();
+					collisionShape.Shape = box;
+
+					// Position center of box
+					float centerX = (x + endX + 1) * 0.5f * cellSize;
+					float centerY = wallHeight * 0.5f;
+					float centerZ = (y + endY + 1) * 0.5f * cellSize;
+					collisionShape.Position = new Godot.Vector3(centerX, centerY, centerZ);
+
+					staticBody.AddChild(collisionShape);
+
+					// Mark handled
+					for (int xi = x; xi <= endX; xi++)
+						for (int yi = y; yi <= endY; yi++)
+							handled[xi, yi] = true;
 				}
 			}
 		}
+
+		
+		void AddQuad(SurfaceTool st, Godot.Vector3 v0, Godot.Vector3 v1, Godot.Vector3 v2, Godot.Vector3 v3, bool r = false){
+			if (!r){
+				st.AddVertex(v0);
+				st.AddVertex(v1);
+				st.AddVertex(v2);
+
+				st.AddVertex(v0);
+				st.AddVertex(v2);
+				st.AddVertex(v3);
+			} else{
+				st.AddVertex(v2);
+				st.AddVertex(v1);
+				st.AddVertex(v0);
+
+				st.AddVertex(v3);
+				st.AddVertex(v2);
+				st.AddVertex(v0);
+			}
+		}
+
+
+		 Mesh GenerateMesh(Cell[,] cells, float cellSize, float wallHeight){
+			int width = cells.GetLength(0);
+			int height = cells.GetLength(1);
+
+			ArrayMesh mesh = new ArrayMesh();
+			SurfaceTool tool = new SurfaceTool();
+			tool.Begin(Mesh.PrimitiveType.Triangles);
+
+			for (int x = 0; x < width; x++)
+			{
+				for (int y = 0; y < height; y++)
+				{
+					if (cells[x, y].Type != CellType.Wall)
+						continue;
+
+					Godot.Vector3 pos = new Godot.Vector3(x * cellSize, 0, y * cellSize);
+
+					// Top face
+					tool.SetColor(Godot.Colors.Gray);
+
+					// Check neighbors for sides
+					bool left = x == 0 || cells[x - 1, y].Type != CellType.Wall;
+					bool right = x == width - 1 || cells[x + 1, y].Type != CellType.Wall;
+					bool front = y == 0 || cells[x, y - 1].Type != CellType.Wall;
+					bool back = y == height - 1 || cells[x, y + 1].Type != CellType.Wall;
+
+					// Front (-Z)
+					if (front) AddQuad(tool,
+						pos + new Godot.Vector3(0, 0, 0),
+						pos + new Godot.Vector3(cellSize, 0, 0),
+						pos + new Godot.Vector3(cellSize, wallHeight, 0),
+						pos + new Godot.Vector3(0, wallHeight, 0)
+					);
+
+					// Back (+Z)
+					if (back) AddQuad(tool,
+						pos + new Godot.Vector3(0, 0, cellSize),
+						pos + new Godot.Vector3(cellSize, 0, cellSize),
+						pos + new Godot.Vector3(cellSize, wallHeight, cellSize),
+						pos + new Godot.Vector3(0, wallHeight, cellSize),true
+					);
+
+					// Left (-X)
+					if (left) AddQuad(tool,
+						pos + new Godot.Vector3(0, 0, 0),
+						pos + new Godot.Vector3(0, 0, cellSize),
+						pos + new Godot.Vector3(0, wallHeight, cellSize),
+						pos + new Godot.Vector3(0, wallHeight, 0),true
+					);
+
+					// Right (+X)
+					if (right) AddQuad(tool,
+						pos + new Godot.Vector3(cellSize, 0, 0),
+						pos + new Godot.Vector3(cellSize, 0, cellSize),
+						pos + new Godot.Vector3(cellSize, wallHeight, cellSize),
+						pos + new Godot.Vector3(cellSize, wallHeight, 0)
+					);
+				}
+			}
+
+			tool.GenerateNormals();
+			return tool.Commit();
+		}
 	}
+
 
 	public enum AStar {
 		Unchecked = 0,
@@ -223,16 +341,16 @@ namespace Generate
 					Point p = ends[e];
 					while (!pathFinished) {
 						List<(int X, int Y, Cell cell)> temp = new List<(int X, int Y, Cell cell)>();
-						if (p.X - 1 >= 0 && cells[p.X - 1, p.Y].Type != CellType.Wall) {
+						if (p.X - 1 > 0 && cells[p.X - 1, p.Y].Type != CellType.Wall) {
 							temp.Add((p.X - 1, p.Y, cells[p.X - 1, p.Y]));
 						}
-						if (p.X + 1 <= cells.GetLength(0) && cells[p.X + 1, p.Y].Type != CellType.Wall) {
+						if (p.X + 1 < cells.GetLength(0) && cells[p.X + 1, p.Y].Type != CellType.Wall) {
 							temp.Add((p.X + 1, p.Y, cells[p.X + 1, p.Y]));
 						}
-						if (p.Y - 1 >= 0 && cells[p.X, p.Y - 1].Type != CellType.Wall) {
+						if (p.Y - 1 > 0 && cells[p.X, p.Y - 1].Type != CellType.Wall) {
 							temp.Add((p.X, p.Y - 1, cells[p.X, p.Y - 1]));
 						}
-						if (p.Y + 1 <= cells.GetLength(1) && cells[p.X, p.Y + 1].Type != CellType.Wall) {
+						if (p.Y + 1 < cells.GetLength(1) && cells[p.X, p.Y + 1].Type != CellType.Wall) {
 							temp.Add((p.X, p.Y + 1, cells[p.X, p.Y + 1]));
 						}
 						var next = temp.OrderBy(x => x.cell.GCost).First();
